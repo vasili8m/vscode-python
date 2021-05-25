@@ -64,13 +64,9 @@
         "onCommand:python.debugtests",
         "onCommand:python.setInterpreter",
         "onCommand:python.setShebangInterpreter",
-        "onCommand:python.viewTestUI",
         "onCommand:python.viewLanguageServerOutput",
-        "onCommand:python.viewTestOutput",
         "onCommand:python.viewOutput",
-        "onCommand:python.selectAndRunTestMethod",
         "onCommand:python.selectAndDebugTestMethod",
-        "onCommand:python.selectAndRunTestFile",
         "onCommand:python.runCurrentTestFile",
         "onCommand:python.runFailedTests",
         "onCommand:python.execSelectionInTerminal",
@@ -243,15 +239,6 @@
                 "category": "Python Refactor"
             },
             {
-                "command": "python.viewTestOutput",
-                "title": "%python.command.python.viewTestOutput.title%",
-                "category": "Python",
-                "icon": {
-                    "light": "resources/light/repl.svg",
-                    "dark": "resources/dark/repl.svg"
-                }
-            },
-            {
                 "command": "python.viewLanguageServerOutput",
                 "title": "%python.command.python.viewLanguageServerOutput.title%",
                 "category": "Python",
@@ -267,18 +254,8 @@
                 }
             },
             {
-                "command": "python.selectAndRunTestMethod",
-                "title": "%python.command.python.selectAndRunTestMethod.title%",
-                "category": "Python"
-            },
-            {
                 "command": "python.selectAndDebugTestMethod",
                 "title": "%python.command.python.selectAndDebugTestMethod.title%",
-                "category": "Python"
-            },
-            {
-                "command": "python.selectAndRunTestFile",
-                "title": "%python.command.python.selectAndRunTestFile.title%",
                 "category": "Python"
             },
             {
@@ -552,11 +529,6 @@
                     "command": "python.runFailedTests",
                     "when": "view == python_tests && hasFailedTests && !busyTests",
                     "group": "navigation@2"
-                },
-                {
-                    "command": "python.viewTestOutput",
-                    "when": "view == python_tests",
-                    "group": "navigation@5"
                 }
             ],
             "view/item/context": [
