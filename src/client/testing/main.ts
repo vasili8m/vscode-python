@@ -42,6 +42,7 @@ import { TEST_OUTPUT_CHANNEL } from './constants';
 import { ITestingService } from './types';
 import { PythonTestController } from './testController/controller';
 import { IExtensionActivationService } from '../activation/types';
+import { CommandSource } from '../common/constants';
 
 @injectable()
 export class TestingService implements ITestingService {
