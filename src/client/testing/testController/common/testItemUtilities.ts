@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { TestItem } from 'vscode';
+import { TestItem, Uri } from 'vscode';
 import { traceVerbose } from '../../../common/logger';
 import {
     RawDiscoveredTests,
@@ -14,6 +14,7 @@ import { TestCase } from './testCase';
 import { TestCollection } from './testCollection';
 import { TestFile } from './testFile';
 import { TestFolder } from './testFolder';
+import { PythonTestData } from './types';
 import { WorkspaceTestRoot } from './workspaceTestRoot';
 
 export function updateTestRoot(
@@ -81,4 +82,29 @@ export function updateTestRoot(
     });
 
     return root;
+}
+
+export function getUri(node: TestItem<PythonTestData>): Uri | undefined {
+    if (!node.uri && node.parent) {
+        return getUri(node.parent);
+    }
+    return node.uri;
+}
+
+export function getTestCaseNodes(
+    testNode: TestItem<PythonTestData>,
+    collection: TestItem<TestCase>[] = [],
+): TestItem<TestCase>[] {
+    if (testNode.data instanceof TestCase) {
+        collection.push(testNode as TestItem<TestCase>);
+    }
+    const nodes = Array.from(testNode.children.values());
+    for (const node of nodes) {
+        if (node.data instanceof TestCase) {
+            collection.push(node);
+        } else {
+            getTestCaseNodes(node, collection);
+        }
+    }
+    return collection;
 }

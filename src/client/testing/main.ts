@@ -20,7 +20,7 @@ import { IInterpreterService } from '../interpreter/contracts';
 import { IServiceContainer } from '../ioc/types';
 import { EventName } from '../telemetry/constants';
 import { captureTelemetry, sendTelemetryEvent } from '../telemetry/index';
-import { CANCELLATION_REASON } from './common/constants';
+import { CANCELLATION_REASON, PYTEST_PROVIDER } from './common/constants';
 import { selectTestWorkspace } from './common/testUtils';
 import { TestSettingsPropertyNames } from './configuration/types';
 import {
@@ -32,7 +32,6 @@ import {
     ITestDisplay,
     TestFile,
     TestFunction,
-    ITestResultDisplay,
     ITestsHelper,
     TestStatus,
     TestsToRun,
@@ -43,6 +42,7 @@ import { ITestingService } from './types';
 import { PythonTestController } from './testController/controller';
 import { IExtensionActivationService } from '../activation/types';
 import { CommandSource } from '../common/constants';
+import { ITestController } from './testController/common/types';
 
 @injectable()
 export class TestingService implements ITestingService {
@@ -62,7 +62,6 @@ export class UnitTestManagementService implements ITestManagementService, IExten
     private workspaceTestManagerService?: IWorkspaceTestManagerService;
     private documentManager: IDocumentManager;
     private workspaceService: IWorkspaceService;
-    private testResultDisplay?: ITestResultDisplay;
     private autoDiscoverTimer?: NodeJS.Timer | number;
     private configChangedTimer?: NodeJS.Timer | number;
     private testManagers = new Set<ITestManager>();
@@ -108,7 +107,11 @@ export class UnitTestManagementService implements ITestManagementService, IExten
         );
 
         if (test && test.registerTestController) {
-            this.disposableRegistry.push(test.registerTestController(new PythonTestController()));
+            const controller = new PythonTestController(
+                this.serviceContainer.get<IConfigurationService>(IConfigurationService),
+                this.serviceContainer.get<ITestController>(ITestController, PYTEST_PROVIDER),
+            );
+            this.disposableRegistry.push(test.registerTestController(controller));
         }
     }
     public async getTestManager(
@@ -162,18 +165,11 @@ export class UnitTestManagementService implements ITestManagementService, IExten
             .get<IConfigurationService>(IConfigurationService)
             .getSettings(workspaceUri);
         if (!settings.testing.pytestEnabled && !settings.testing.unittestEnabled) {
-            if (this.testResultDisplay) {
-                this.testResultDisplay.enabled = false;
-            }
-
             // TODO: Why are we disposing, what happens when tests are enabled.
             if (this.workspaceTestManagerService) {
                 this.workspaceTestManagerService.dispose();
             }
             return;
-        }
-        if (this.testResultDisplay) {
-            this.testResultDisplay.enabled = true;
         }
         this.autoDiscoverTests(workspaceUri).catch((ex) =>
             traceError('Failed to auto discover tests upon activation', ex),
@@ -234,9 +230,6 @@ export class UnitTestManagementService implements ITestManagementService, IExten
             return;
         }
 
-        if (!this.testResultDisplay) {
-            this.testResultDisplay = this.serviceContainer.get<ITestResultDisplay>(ITestResultDisplay);
-        }
         const discoveryPromise = testManager.discoverTests(
             cmdSource,
             ignoreCache,
@@ -244,9 +237,6 @@ export class UnitTestManagementService implements ITestManagementService, IExten
             userInitiated,
             clearTestStatus,
         );
-        this.testResultDisplay
-            .displayDiscoverStatus(discoveryPromise, quietMode)
-            .catch((ex) => traceError('Python Extension: displayDiscoverStatus', ex));
         await discoveryPromise;
     }
     public async stopTests(resource: Uri) {
@@ -316,10 +306,6 @@ export class UnitTestManagementService implements ITestManagementService, IExten
             return;
         }
 
-        if (!this.testResultDisplay) {
-            this.testResultDisplay = this.serviceContainer.get<ITestResultDisplay>(ITestResultDisplay);
-        }
-
         const promise = testManager.runTest(cmdSource, testsToRun, runFailedTests, debug).catch((reason) => {
             if (reason !== CANCELLATION_REASON) {
                 this.outputChannel.appendLine(`Error: ${reason}`);
@@ -327,7 +313,6 @@ export class UnitTestManagementService implements ITestManagementService, IExten
             return Promise.reject(reason);
         });
 
-        this.testResultDisplay.displayProgressStatus(promise, debug);
         await promise;
     }
 
