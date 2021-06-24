@@ -693,6 +693,7 @@ export class NotebookConverter implements Disposable {
                 throw new Error(`Invalid uri, not a notebook: ${uri.fsPath}`);
             }
             result = new NotebookConcatDocument(doc, this.api, this.cellSelector);
+            this.disposables.push(result);
             result.onCellsChanged((e) => this.onDidChangeCellsEmitter.fire(e), undefined, this.disposables);
             this.activeDocuments.set(key, result);
             this.activeDocumentsOutgoingMap.set(NotebookConverter.getDocumentKey(result.uri), result);
