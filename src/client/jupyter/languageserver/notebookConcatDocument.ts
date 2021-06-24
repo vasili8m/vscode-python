@@ -17,11 +17,12 @@ import {
     Uri,
 } from 'vscode';
 import { isEqual } from 'lodash';
-import { NotebookConcatTextDocument, NotebookCell, NotebookDocument } from 'vscode-proposed';
+import { NotebookCell, NotebookDocument } from 'vscode-proposed';
 import { IVSCodeNotebook } from '../../common/application/types';
 import { IDisposable } from '../../common/types';
 import { PYTHON_LANGUAGE } from '../../common/constants';
 import { SafeNotebookDocument } from './safeNotebookDocument';
+import { EnhancedNotebookConcatTextDocument, IConcatTextDocument } from './concatTextDocument';
 
 const NotebookConcatPrefix = '_NotebookConcat_';
 
@@ -104,7 +105,7 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
 
     public firedClose = false;
 
-    public concatDocument: NotebookConcatTextDocument;
+    public concatDocument: IConcatTextDocument;
 
     private dummyFilePath: string;
 
@@ -130,7 +131,7 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
         // that the caller doesn't remove diagnostics for this document.
         this.dummyFilePath = path.join(dir, `${NotebookConcatPrefix}${uuid().replace(/-/g, '')}.py`);
         this.dummyUri = Uri.file(this.dummyFilePath);
-        this.concatDocument = notebookApi.createConcatTextDocument(notebook, selector);
+        this.concatDocument = new EnhancedNotebookConcatTextDocument(notebook, selector, notebookApi);
         this.onDidChangeSubscription = this.concatDocument.onDidChange(this.onDidChange, this);
         this.updateCellTracking();
     }
@@ -150,15 +151,7 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
     }
 
     public lineAt(posOrNumber: Position | number): TextLine {
-        const position = typeof posOrNumber === 'number' ? new Position(posOrNumber, 0) : posOrNumber;
-
-        // convert this position into a cell location
-        // (we need the translated location, that's why we can't use getCellAtPosition)
-        const location = this.concatDocument.locationAt(position);
-
-        // Get the cell at this location
-        const cell = this.notebook.getCells().find((c) => c.document.uri.toString() === location.uri.toString());
-        return cell!.document.lineAt(location.range.start);
+        return this.concatDocument.lineAt(posOrNumber);
     }
 
     public offsetAt(position: Position): number {
@@ -174,13 +167,7 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
     }
 
     public getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined {
-        // convert this position into a cell location
-        // (we need the translated location, that's why we can't use getCellAtPosition)
-        const location = this.concatDocument.locationAt(position);
-
-        // Get the cell at this location
-        const cell = this.notebook.getCells().find((c) => c.document.uri.toString() === location.uri.toString());
-        return cell!.document.getWordRangeAtPosition(location.range.start, regexp);
+        return this.concatDocument.getWordRangeAtPosition(position, regexp);
     }
 
     public validateRange(range: Range): Range {
