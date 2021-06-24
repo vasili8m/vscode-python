@@ -32,7 +32,7 @@ import {
 } from 'vscode';
 import { NotebookCell, NotebookDocument } from 'vscode-proposed';
 import { IVSCodeNotebook } from '../../common/application/types';
-import { InteractiveInputScheme, InteractiveScheme } from '../../common/constants';
+import { InteractiveInputScheme, InteractiveScheme, NotebookCellScheme, PYTHON_LANGUAGE } from '../../common/constants';
 import { IFileSystem } from '../../common/platform/types';
 import { IConcatTextDocument } from './concatTextDocument';
 import { NotebookConcatDocument } from './notebookConcatDocument';
@@ -146,8 +146,10 @@ export class NotebookConverter implements Disposable {
             const cellUris: string[] = [];
             const oldCellUris = this.mapOfConcatDocumentsWithCellUris.get(uri.toString()) || [];
             wrapper.notebook.getCells().forEach((c: NotebookCell) => {
-                result.set(c.document.uri, []);
-                cellUris.push(c.document.uri.toString());
+                if (c.document.languageId === PYTHON_LANGUAGE) {
+                    result.set(c.document.uri, []);
+                    cellUris.push(c.document.uri.toString());
+                }
             });
             // Possible some cells were deleted, we need to clear the diagnostics of those cells as well.
             const currentCellUris = new Set(cellUris);
@@ -603,9 +605,7 @@ export class NotebookConverter implements Disposable {
     // Returns true if the given location needs conversion
     // Should be if it's in a notebook cell or if it's in a notebook concat document
     private locationNeedsConversion(locationUri: Uri): boolean {
-        return (
-            locationUri.scheme === 'vscode-notebook-cell' || this.getWrapperFromOutgoingUri(locationUri) !== undefined
-        );
+        return locationUri.scheme === NotebookCellScheme || this.getWrapperFromOutgoingUri(locationUri) !== undefined;
     }
 
     private toIncomingUri(outgoingUri: Uri, range: Range) {
@@ -664,7 +664,7 @@ export class NotebookConverter implements Disposable {
 
     private onDidOpenNotebook(doc: NotebookDocument) {
         const safeDoc = new SafeNotebookDocument(doc);
-        if (this.notebookFilter.test(safeDoc.fileName) || doc.notebookType === 'interactive') {
+        if (this.notebookFilter.test(safeDoc.fileName)) {
             this.getTextDocumentWrapper(safeDoc.uri);
         }
     }
@@ -676,6 +676,7 @@ export class NotebookConverter implements Disposable {
             const wrapper = this.getTextDocumentWrapper(safeDoc.uri);
             this.activeDocuments.delete(key);
             this.activeDocumentsOutgoingMap.delete(NotebookConverter.getDocumentKey(wrapper.uri));
+            wrapper.dispose();
         }
     }
 

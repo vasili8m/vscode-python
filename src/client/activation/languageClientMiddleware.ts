@@ -140,8 +140,8 @@ export class LanguageClientMiddleware implements Middleware {
                 getClient,
                 fileSystem,
                 PYTHON_LANGUAGE,
-                /.*\.ipynb/m,
-            );
+                /.*\.(ipynb|interactive)/m,
+                );
         }
         disposables.push(
             extensions?.onDidChange(() => {
@@ -154,7 +154,7 @@ export class LanguageClientMiddleware implements Middleware {
                             getClient,
                             fileSystem,
                             PYTHON_LANGUAGE,
-                            /.*\.ipynb/m,
+                            /.*\.(ipynb|interactive)/m,
                         );
                     }
                 }

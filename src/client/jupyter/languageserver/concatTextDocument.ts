@@ -1,24 +1,23 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { 
+import {
     NotebookDocument,
     Position,
-    Range, 
-    TextDocument, 
-    Uri, 
+    Range,
+    TextDocument,
+    Uri,
     workspace,
     DocumentSelector,
     Event,
     EventEmitter,
     Location,
-    TextLine
+    TextLine,
 } from 'vscode';
 import { NotebookConcatTextDocument } from 'vscode-proposed';
 
 import { IVSCodeNotebook } from '../../common/application/types';
-import { InteractiveInputScheme } from '../../common/constants';
-
+import { InteractiveInputScheme, PYTHON_LANGUAGE } from '../../common/constants';
 
 export interface IConcatTextDocument {
     onDidChange: Event<void>;
@@ -34,7 +33,7 @@ export interface IConcatTextDocument {
     getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined;
 }
 
-export class InteractiveConcatTextDocument implements IConcatTextDocument  {
+export class InteractiveConcatTextDocument implements IConcatTextDocument {
     private _onDidChange = new EventEmitter<void>();
     onDidChange: Event<void> = this._onDidChange.event;
     private _input: TextDocument | undefined = undefined;
@@ -59,7 +58,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
             this._onDidChange.fire();
         });
 
-        workspace.onDidChangeTextDocument(e => {
+        workspace.onDidChangeTextDocument((e) => {
             if (e.document === this._input) {
                 this._updateInput();
                 this._onDidChange.fire();
@@ -69,7 +68,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         this._updateConcat();
         this._updateInput();
 
-        const once = workspace.onDidOpenTextDocument(e => {
+        const once = workspace.onDidOpenTextDocument((e) => {
             if (e.uri.scheme === InteractiveInputScheme) {
                 const counter = /Interactive-(\d+)\.interactive/.exec(this._notebook.uri.path);
                 if (!counter || !counter[1]) {
@@ -90,7 +89,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         let concatTextLen = 0;
         for (let i = 0; i < this._notebook.cellCount; i++) {
             const cell = this._notebook.cellAt(i);
-            if (cell.document.languageId === 'python') {
+            if (cell.document.languageId === PYTHON_LANGUAGE) {
                 concatLineCnt += cell.document.lineCount + 1;
                 concatTextLen += this._getDocumentTextLen(cell.document) + 1;
             }
@@ -98,25 +97,16 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
 
         this._lineCounts = [
             concatLineCnt > 0 ? concatLineCnt - 1 : 0, // NotebookConcatTextDocument.lineCount
-            this._lineCounts[1]
+            this._lineCounts[1],
         ];
 
-        this._textLen = [
-            concatTextLen > 0 ? concatTextLen - 1 : 0,
-            this._textLen[1]
-        ];
+        this._textLen = [concatTextLen > 0 ? concatTextLen - 1 : 0, this._textLen[1]];
     }
 
     private _updateInput() {
-        this._lineCounts = [
-            this._lineCounts[0],
-            this._input?.lineCount ?? 0
-        ];
+        this._lineCounts = [this._lineCounts[0], this._input?.lineCount ?? 0];
 
-        this._textLen = [
-            this._textLen[0],
-            this._getDocumentTextLen(this._input)
-        ];
+        this._textLen = [this._textLen[0], this._getDocumentTextLen(this._input)];
     }
 
     private _getDocumentTextLen(textDocument?: TextDocument) {
@@ -124,7 +114,6 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
             return 0;
         }
         return textDocument.offsetAt(textDocument.lineAt(textDocument.lineCount - 1).range.end) + 1;
-
     }
 
     getText(range?: Range) {
@@ -141,8 +130,10 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         const start = this.locationAt(range.start);
         const end = this.locationAt(range.end);
 
-        const startDocument = workspace.textDocuments.find(document => document.uri.toString() === start.uri.toString());
-        const endDocument = workspace.textDocuments.find(document => document.uri.toString() === end.uri.toString());
+        const startDocument = workspace.textDocuments.find(
+            (document) => document.uri.toString() === start.uri.toString(),
+        );
+        const endDocument = workspace.textDocuments.find((document) => document.uri.toString() === end.uri.toString());
 
         if (!startDocument || !endDocument) {
             return '';
@@ -184,7 +175,10 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
 
         if (locationOrOffset.uri.toString() === this._input?.uri.toString()) {
             // range in the input box
-            return new Position(this._lineCounts[0] + locationOrOffset.range.start.line, locationOrOffset.range.start.character);
+            return new Position(
+                this._lineCounts[0] + locationOrOffset.range.start.line,
+                locationOrOffset.range.start.character,
+            );
         } else {
             return this._concatTextDocument.positionAt(locationOrOffset);
         }
@@ -263,11 +257,7 @@ export class EnhancedNotebookConcatTextDocument implements IConcatTextDocument {
     onDidChange: Event<void> = this._onDidChange.event;
     private _concatTextDocument: NotebookConcatTextDocument;
 
-    constructor(
-        private _notebook: NotebookDocument,
-        selector: DocumentSelector,
-        notebookApi: IVSCodeNotebook,
-    ) {
+    constructor(private _notebook: NotebookDocument, selector: DocumentSelector, notebookApi: IVSCodeNotebook) {
         this._concatTextDocument = notebookApi.createConcatTextDocument(_notebook, selector);
     }
 
@@ -331,5 +321,4 @@ export class EnhancedNotebookConcatTextDocument implements IConcatTextDocument {
         const cell = this._notebook.getCells().find((c) => c.document.uri.toString() === location.uri.toString());
         return cell!.document.getWordRangeAtPosition(location.range.start, regexp);
     }
-
 }
