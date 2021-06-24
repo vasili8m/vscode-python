@@ -15,6 +15,7 @@ import {
     TextDocumentChangeEvent,
     TextLine,
     Uri,
+    workspace,
 } from 'vscode';
 import { isEqual } from 'lodash';
 import { NotebookCell, NotebookDocument } from 'vscode-proposed';
@@ -22,7 +23,7 @@ import { IVSCodeNotebook } from '../../common/application/types';
 import { IDisposable } from '../../common/types';
 import { PYTHON_LANGUAGE } from '../../common/constants';
 import { SafeNotebookDocument } from './safeNotebookDocument';
-import { EnhancedNotebookConcatTextDocument, IConcatTextDocument } from './concatTextDocument';
+import { EnhancedNotebookConcatTextDocument, IConcatTextDocument, InteractiveConcatTextDocument } from './concatTextDocument';
 
 const NotebookConcatPrefix = '_NotebookConcat_';
 
@@ -131,9 +132,31 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
         // that the caller doesn't remove diagnostics for this document.
         this.dummyFilePath = path.join(dir, `${NotebookConcatPrefix}${uuid().replace(/-/g, '')}.py`);
         this.dummyUri = Uri.file(this.dummyFilePath);
-        this.concatDocument = new EnhancedNotebookConcatTextDocument(notebook, selector, notebookApi);
+        const inputDocument = this._getInputDocument(notebook);
+
+        if (inputDocument) {
+            this.concatDocument = new InteractiveConcatTextDocument(notebook, selector, inputDocument, notebookApi);
+        } else {
+            this.concatDocument = new EnhancedNotebookConcatTextDocument(notebook, selector, notebookApi);
+        }
+        
         this.onDidChangeSubscription = this.concatDocument.onDidChange(this.onDidChange, this);
         this.updateCellTracking();
+    }
+
+    private _getInputDocument(notebook: NotebookDocument) {
+        if (notebook.uri.scheme !== 'vscode-interactive') {
+            return undefined;
+        }
+
+        // interactive window
+        const counter = /Interactive-(\d+)\.interactive/.exec(notebook.uri.path);
+        if (!counter || !counter[1]) {
+            return undefined;
+        }
+
+        const document = workspace.textDocuments.find(textDocument => textDocument.uri.scheme === 'vscode-interactive-input' && textDocument.uri.path.indexOf(`InteractiveInput-${counter[1]}`) >= 0)
+        return document;
     }
 
     public dispose(): void {

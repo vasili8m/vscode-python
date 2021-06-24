@@ -47,10 +47,11 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     }
     constructor(
         private _notebook: NotebookDocument,
+        private _selector: DocumentSelector,
         private _input: TextDocument,
         notebookApi: IVSCodeNotebook,
     ) {
-        this._concatTextDocument = notebookApi.createConcatTextDocument(_notebook, { language: 'python' });
+        this._concatTextDocument = notebookApi.createConcatTextDocument(_notebook, this._selector);
 
         this._concatTextDocument.onDidChange(() => {
             // not performant, NotebookConcatTextDocument should provide lineCount
