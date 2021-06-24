@@ -178,13 +178,13 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
                 return this._input?.positionAt(offset) ?? new Position(0, 0);
             } else {
                 const position = this._concatTextDocument.positionAt(locationOrOffset);
-                return new Position(this._lineCounts[0] + 1 + position.line, position.character);
+                return new Position(this._lineCounts[0] + position.line, position.character);
             }
         }
 
         if (locationOrOffset.uri.toString() === this._input?.uri.toString()) {
             // range in the input box
-            return new Position(this._lineCounts[0] + 1 + locationOrOffset.range.start.line, locationOrOffset.range.start.character);
+            return new Position(this._lineCounts[0] + locationOrOffset.range.start.line, locationOrOffset.range.start.character);
         } else {
             return this._concatTextDocument.positionAt(locationOrOffset);
         }
