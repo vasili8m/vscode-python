@@ -11,8 +11,8 @@ import {
     DocumentSelector,
     Event,
     EventEmitter,
-	Location,
-	TextLine
+    Location,
+    TextLine
 } from 'vscode';
 import { NotebookConcatTextDocument } from 'vscode-proposed';
 
@@ -29,8 +29,8 @@ export interface IConcatTextDocument {
     validateRange(range: Range): Range;
     validatePosition(position: Position): Position;
     locationAt(positionOrRange: Position | Range): Location;
-	lineAt(posOrNumber: Position | number): TextLine;
-	getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined;
+    lineAt(posOrNumber: Position | number): TextLine;
+    getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined;
 }
 
 export class InteractiveConcatTextDocument implements IConcatTextDocument  {
@@ -38,199 +38,199 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     onDidChange: Event<void> = this._onDidChange.event;
     
 
-	private _concatTextDocument: NotebookConcatTextDocument;
-	private _lineCounts: [number, number] = [0, 0];
-	private _textLen: [number, number] = [0, 0];
+    private _concatTextDocument: NotebookConcatTextDocument;
+    private _lineCounts: [number, number] = [0, 0];
+    private _textLen: [number, number] = [0, 0];
 
     get isClosed(): boolean {
         return this._concatTextDocument.isClosed;
     }
-	constructor(
-		private _notebook: NotebookDocument,
-		private _input: TextDocument,
+    constructor(
+        private _notebook: NotebookDocument,
+        private _input: TextDocument,
         notebookApi: IVSCodeNotebook,
-	) {
-		this._concatTextDocument = notebookApi.createConcatTextDocument(_notebook, { language: 'python' });
+    ) {
+        this._concatTextDocument = notebookApi.createConcatTextDocument(_notebook, { language: 'python' });
 
-		this._concatTextDocument.onDidChange(() => {
-			// not performant, NotebookConcatTextDocument should provide lineCount
-			this._updateConcat();
+        this._concatTextDocument.onDidChange(() => {
+            // not performant, NotebookConcatTextDocument should provide lineCount
+            this._updateConcat();
             this._onDidChange.fire();
-		});
+        });
 
-		workspace.onDidChangeTextDocument(e => {
-			if (e.document === this._input) {
-				this._updateInput();
-				this._onDidChange.fire();
-			}
-		})
+        workspace.onDidChangeTextDocument(e => {
+            if (e.document === this._input) {
+                this._updateInput();
+                this._onDidChange.fire();
+            }
+        })
 
-		this._updateConcat();
-		this._updateInput();
-	}
+        this._updateConcat();
+        this._updateInput();
+    }
 
-	private _updateConcat() {
-		let concatLineCnt = 0;
-		let concatTextLen = 0;
-		for (let i = 0; i < this._notebook.cellCount; i++) {
-			const cell = this._notebook.cellAt(i);
-			if (cell.document.languageId === 'python') {
-				concatLineCnt += cell.document.lineCount + 1;
-				concatTextLen += this._getDocumentTextLen(cell.document) + 1;
-			}
-		}
+    private _updateConcat() {
+        let concatLineCnt = 0;
+        let concatTextLen = 0;
+        for (let i = 0; i < this._notebook.cellCount; i++) {
+            const cell = this._notebook.cellAt(i);
+            if (cell.document.languageId === 'python') {
+                concatLineCnt += cell.document.lineCount + 1;
+                concatTextLen += this._getDocumentTextLen(cell.document) + 1;
+            }
+        }
 
-		this._lineCounts = [
-			concatLineCnt > 0 ? concatLineCnt - 1 : 0, // NotebookConcatTextDocument.lineCount
-			this._lineCounts[1]
-		];
+        this._lineCounts = [
+            concatLineCnt > 0 ? concatLineCnt - 1 : 0, // NotebookConcatTextDocument.lineCount
+            this._lineCounts[1]
+        ];
 
-		this._textLen = [
-			concatTextLen > 0 ? concatTextLen - 1 : 0,
-			this._textLen[1]
-		];
-	}
+        this._textLen = [
+            concatTextLen > 0 ? concatTextLen - 1 : 0,
+            this._textLen[1]
+        ];
+    }
 
-	private _updateInput() {
-		this._lineCounts = [
-			this._lineCounts[0],
-			this._input.lineCount
-		];
+    private _updateInput() {
+        this._lineCounts = [
+            this._lineCounts[0],
+            this._input.lineCount
+        ];
 
-		this._textLen = [
-			this._textLen[0],
-			this._getDocumentTextLen(this._input)
-		];
-	}
+        this._textLen = [
+            this._textLen[0],
+            this._getDocumentTextLen(this._input)
+        ];
+    }
 
-	private _getDocumentTextLen(textDocument: TextDocument) {
-		return textDocument.offsetAt(textDocument.lineAt(textDocument.lineCount - 1).range.end) + 1;
+    private _getDocumentTextLen(textDocument: TextDocument) {
+        return textDocument.offsetAt(textDocument.lineAt(textDocument.lineCount - 1).range.end) + 1;
 
-	}
+    }
 
-	getText(range?: Range) {
-		if (!range) {
-			let result = '';
-			result += this._concatTextDocument.getText() + '\n' + this._input.getText();
-			return result;
-		}
+    getText(range?: Range) {
+        if (!range) {
+            let result = '';
+            result += this._concatTextDocument.getText() + '\n' + this._input.getText();
+            return result;
+        }
 
-		if (range.isEmpty) {
-			return '';
-		}
+        if (range.isEmpty) {
+            return '';
+        }
 
-		const start = this.locationAt(range.start);
-		const end = this.locationAt(range.end);
+        const start = this.locationAt(range.start);
+        const end = this.locationAt(range.end);
 
-		const startDocument = workspace.textDocuments.find(document => document.uri.toString() === start.uri.toString());
-		const endDocument = workspace.textDocuments.find(document => document.uri.toString() === end.uri.toString());
+        const startDocument = workspace.textDocuments.find(document => document.uri.toString() === start.uri.toString());
+        const endDocument = workspace.textDocuments.find(document => document.uri.toString() === end.uri.toString());
 
-		if (!startDocument || !endDocument) {
-			return '';
-		} else if (startDocument === endDocument) {
-			return startDocument.getText(start.range);
-		} else {
-			const a = startDocument.getText(new Range(start.range.start, new Position(startDocument.lineCount, 0)));
-			const b = endDocument.getText(new Range(new Position(0, 0), end.range.end));
-			return a + '\n' + b;
-		}
-	}
+        if (!startDocument || !endDocument) {
+            return '';
+        } else if (startDocument === endDocument) {
+            return startDocument.getText(start.range);
+        } else {
+            const a = startDocument.getText(new Range(start.range.start, new Position(startDocument.lineCount, 0)));
+            const b = endDocument.getText(new Range(new Position(0, 0), end.range.end));
+            return a + '\n' + b;
+        }
+    }
 
-	offsetAt(position: Position): number {
-		const line = position.line;
-		if (line >= this._lineCounts[0]) {
-			// input box
-			const lineOffset = Math.max(0, line - this._lineCounts[0] - 1);
-			return this._input.offsetAt(new Position(lineOffset, position.character));
-		} else {
-			// concat
-			return this._concatTextDocument.offsetAt(position);
-		}
-	}
+    offsetAt(position: Position): number {
+        const line = position.line;
+        if (line >= this._lineCounts[0]) {
+            // input box
+            const lineOffset = Math.max(0, line - this._lineCounts[0] - 1);
+            return this._input.offsetAt(new Position(lineOffset, position.character));
+        } else {
+            // concat
+            return this._concatTextDocument.offsetAt(position);
+        }
+    }
 
-	// turning an offset on the final concatenatd document to position
-	positionAt(locationOrOffset: Location | number): Position {
-		if (typeof locationOrOffset === 'number') {
-			const concatTextLen = this._textLen[0];
+    // turning an offset on the final concatenatd document to position
+    positionAt(locationOrOffset: Location | number): Position {
+        if (typeof locationOrOffset === 'number') {
+            const concatTextLen = this._textLen[0];
 
-			if (locationOrOffset >= concatTextLen) {
-				// in the input box
-				const offset = Math.max(0, locationOrOffset - concatTextLen - 1);
-				return this._input.positionAt(offset);
-			} else {
-				const position = this._concatTextDocument.positionAt(locationOrOffset);
-				return new Position(this._lineCounts[0] + 1 + position.line, position.character);
-			}
-		}
+            if (locationOrOffset >= concatTextLen) {
+                // in the input box
+                const offset = Math.max(0, locationOrOffset - concatTextLen - 1);
+                return this._input.positionAt(offset);
+            } else {
+                const position = this._concatTextDocument.positionAt(locationOrOffset);
+                return new Position(this._lineCounts[0] + 1 + position.line, position.character);
+            }
+        }
 
-		if (locationOrOffset.uri.toString() === this._input.uri.toString()) {
-			// range in the input box
-			return new Position(this._lineCounts[0] + 1 + locationOrOffset.range.start.line, locationOrOffset.range.start.character);
-		} else {
-			return this._concatTextDocument.positionAt(locationOrOffset);
-		}
-	}
+        if (locationOrOffset.uri.toString() === this._input.uri.toString()) {
+            // range in the input box
+            return new Position(this._lineCounts[0] + 1 + locationOrOffset.range.start.line, locationOrOffset.range.start.character);
+        } else {
+            return this._concatTextDocument.positionAt(locationOrOffset);
+        }
+    }
 
-	locationAt(positionOrRange: Range | Position): Location {
-		if (positionOrRange instanceof Position) {
-			positionOrRange = new Range(positionOrRange, positionOrRange);
-		}
+    locationAt(positionOrRange: Range | Position): Location {
+        if (positionOrRange instanceof Position) {
+            positionOrRange = new Range(positionOrRange, positionOrRange);
+        }
 
-		const start = positionOrRange.start.line;
-		if (start >= this._lineCounts[0]) {
-			// this is the inputbox
-			const offset = Math.max(0, start - this._lineCounts[0] - 1);
-			const startPosition = new Position(offset, positionOrRange.start.character);
-			const endOffset = Math.max(0, positionOrRange.end.line - this._lineCounts[0] - 1);
-			const endPosition = new Position(endOffset, positionOrRange.end.character);
+        const start = positionOrRange.start.line;
+        if (start >= this._lineCounts[0]) {
+            // this is the inputbox
+            const offset = Math.max(0, start - this._lineCounts[0] - 1);
+            const startPosition = new Position(offset, positionOrRange.start.character);
+            const endOffset = Math.max(0, positionOrRange.end.line - this._lineCounts[0] - 1);
+            const endPosition = new Position(endOffset, positionOrRange.end.character);
 
-			return new Location(this._input.uri, new Range(startPosition, endPosition));
-		} else {
-			// this is the NotebookConcatTextDocument
-			return this._concatTextDocument.locationAt(positionOrRange);
-		}
-	}
+            return new Location(this._input.uri, new Range(startPosition, endPosition));
+        } else {
+            // this is the NotebookConcatTextDocument
+            return this._concatTextDocument.locationAt(positionOrRange);
+        }
+    }
 
-	contains(uri: Uri): boolean {
-		if (this._input.uri.toString() === uri.toString()) {
-			return true;
-		}
+    contains(uri: Uri): boolean {
+        if (this._input.uri.toString() === uri.toString()) {
+            return true;
+        }
 
-		return this._concatTextDocument.contains(uri);
-	}
+        return this._concatTextDocument.contains(uri);
+    }
 
-	validateRange(range: Range): Range {
-		return range;
-	}
+    validateRange(range: Range): Range {
+        return range;
+    }
 
-	validatePosition(position: Position): Position {
-		return position;
-	}
+    validatePosition(position: Position): Position {
+        return position;
+    }
 
-	lineAt(posOrNumber: Position | number): TextLine {
-		const position = typeof posOrNumber === 'number' ? new Position(posOrNumber, 0) : posOrNumber;
+    lineAt(posOrNumber: Position | number): TextLine {
+        const position = typeof posOrNumber === 'number' ? new Position(posOrNumber, 0) : posOrNumber;
 
         // convert this position into a cell location
         // (we need the translated location, that's why we can't use getCellAtPosition)
         const location = this._concatTextDocument.locationAt(position);
 
         // Get the cell at this location
-		if (location.uri.toString() === this._input.uri.toString()) {
-			return this._input.lineAt(location.range.start);
-		}
+        if (location.uri.toString() === this._input.uri.toString()) {
+            return this._input.lineAt(location.range.start);
+        }
 
         const cell = this._notebook.getCells().find((c) => c.document.uri.toString() === location.uri.toString());
         return cell!.document.lineAt(location.range.start);
-	}
+    }
 
-	getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined {
+    getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined {
         // convert this position into a cell location
         // (we need the translated location, that's why we can't use getCellAtPosition)
         const location = this._concatTextDocument.locationAt(position);
 
-		if (location.uri.toString() === this._input.uri.toString()) {
-			return this._input.getWordRangeAtPosition(location.range.start, regexp);
-		}
+        if (location.uri.toString() === this._input.uri.toString()) {
+            return this._input.getWordRangeAtPosition(location.range.start, regexp);
+        }
 
         // Get the cell at this location
         const cell = this._notebook.getCells().find((c) => c.document.uri.toString() === location.uri.toString());
@@ -272,11 +272,11 @@ export class EnhancedNotebookConcatTextDocument implements IConcatTextDocument {
     }
 
     positionAt(locationOrOffset: Location | number): Position {
-		if (typeof locationOrOffset === 'number') {
-			return this._concatTextDocument.positionAt(locationOrOffset);
-		} else {
-			return this._concatTextDocument.positionAt(locationOrOffset);
-		}
+        if (typeof locationOrOffset === 'number') {
+            return this._concatTextDocument.positionAt(locationOrOffset);
+        } else {
+            return this._concatTextDocument.positionAt(locationOrOffset);
+        }
     }
 
     validateRange(range: Range): Range {
@@ -290,7 +290,7 @@ export class EnhancedNotebookConcatTextDocument implements IConcatTextDocument {
         return this._concatTextDocument.locationAt(positionOrRange);
     }
 
-	lineAt(posOrNumber: Position | number): TextLine {
+    lineAt(posOrNumber: Position | number): TextLine {
         const position = typeof posOrNumber === 'number' ? new Position(posOrNumber, 0) : posOrNumber;
 
         // convert this position into a cell location
@@ -302,7 +302,7 @@ export class EnhancedNotebookConcatTextDocument implements IConcatTextDocument {
         return cell!.document.lineAt(location.range.start);
     }
 
-	getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined {
+    getWordRangeAtPosition(position: Position, regexp?: RegExp | undefined): Range | undefined {
         // convert this position into a cell location
         // (we need the translated location, that's why we can't use getCellAtPosition)
         const location = this._concatTextDocument.locationAt(position);

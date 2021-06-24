@@ -178,6 +178,10 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
         return this.concatDocument.validatePosition(pos);
     }
 
+    public locationAt(range: Range) {
+        return this.concatDocument.locationAt(range);
+    }
+
     public getCellAtPosition(position: Position): NotebookCell | undefined {
         const location = this.concatDocument.locationAt(position);
         return this.notebook.getCells().find((c) => c.document.uri === location.uri);

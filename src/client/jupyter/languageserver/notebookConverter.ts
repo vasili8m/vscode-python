@@ -30,9 +30,10 @@ import {
     Uri,
     WorkspaceEdit,
 } from 'vscode';
-import { NotebookCell, NotebookConcatTextDocument, NotebookDocument } from 'vscode-proposed';
+import { NotebookCell, NotebookDocument } from 'vscode-proposed';
 import { IVSCodeNotebook } from '../../common/application/types';
 import { IFileSystem } from '../../common/platform/types';
+import { IConcatTextDocument } from './concatTextDocument';
 import { NotebookConcatDocument } from './notebookConcatDocument';
 import { SafeNotebookDocument } from './safeNotebookDocument';
 
@@ -597,7 +598,7 @@ export class NotebookConverter implements Disposable {
     private toIncomingUri(outgoingUri: Uri, range: Range) {
         const wrapper = this.getWrapperFromOutgoingUri(outgoingUri);
         if (wrapper) {
-            const location = wrapper.concatDocument.locationAt(range);
+            const location = wrapper.locationAt(range);
             return location.uri;
         }
         return outgoingUri;
@@ -686,7 +687,7 @@ export class NotebookConverter implements Disposable {
         return result;
     }
 
-    private getConcatDocument(cell: TextDocument | Uri): NotebookConcatTextDocument | undefined {
+    private getConcatDocument(cell: TextDocument | Uri): IConcatTextDocument | undefined {
         return this.getTextDocumentWrapper(cell)?.concatDocument;
     }
 }
