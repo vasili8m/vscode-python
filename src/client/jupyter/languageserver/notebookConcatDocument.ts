@@ -20,7 +20,7 @@ import { isEqual } from 'lodash';
 import { NotebookCell, NotebookDocument } from 'vscode-proposed';
 import { IVSCodeNotebook } from '../../common/application/types';
 import { IDisposable } from '../../common/types';
-import { PYTHON_LANGUAGE } from '../../common/constants';
+import { InteractiveScheme, PYTHON_LANGUAGE } from '../../common/constants';
 import { SafeNotebookDocument } from './safeNotebookDocument';
 import { EnhancedNotebookConcatTextDocument, IConcatTextDocument, InteractiveConcatTextDocument } from './concatTextDocument';
 
@@ -132,7 +132,7 @@ export class NotebookConcatDocument implements TextDocument, IDisposable {
         this.dummyFilePath = path.join(dir, `${NotebookConcatPrefix}${uuid().replace(/-/g, '')}.py`);
         this.dummyUri = Uri.file(this.dummyFilePath);
 
-        if (notebook.uri.scheme === 'vscode-interactive') {
+        if (notebook.uri.scheme === InteractiveScheme) {
             this.concatDocument = new InteractiveConcatTextDocument(notebook, selector, notebookApi);
         } else {
             this.concatDocument = new EnhancedNotebookConcatTextDocument(notebook, selector, notebookApi);

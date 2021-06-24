@@ -17,6 +17,7 @@ import {
 import { NotebookConcatTextDocument } from 'vscode-proposed';
 
 import { IVSCodeNotebook } from '../../common/application/types';
+import { InteractiveInputScheme } from '../../common/constants';
 
 
 export interface IConcatTextDocument {
@@ -69,7 +70,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         this._updateInput();
 
         const once = workspace.onDidOpenTextDocument(e => {
-            if (e.uri.scheme === 'vscode-interactive-input') {
+            if (e.uri.scheme === InteractiveInputScheme) {
                 const counter = /Interactive-(\d+)\.interactive/.exec(this._notebook.uri.path);
                 if (!counter || !counter[1]) {
                     return;
