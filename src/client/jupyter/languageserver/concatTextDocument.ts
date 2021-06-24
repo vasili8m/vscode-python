@@ -44,7 +44,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     private _textLen: [number, number] = [0, 0];
 
     get isClosed(): boolean {
-        return this._concatTextDocument.isClosed;
+        return this._concatTextDocument.isClosed || !!this._input?.isClosed;
     }
     constructor(
         private _notebook: NotebookDocument,
