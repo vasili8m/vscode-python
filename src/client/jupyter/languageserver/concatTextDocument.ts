@@ -36,7 +36,7 @@ export interface IConcatTextDocument {
 export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     private _onDidChange = new EventEmitter<void>();
     onDidChange: Event<void> = this._onDidChange.event;
-    
+    private _input: TextDocument | undefined = undefined;
 
     private _concatTextDocument: NotebookConcatTextDocument;
     private _lineCounts: [number, number] = [0, 0];
@@ -48,7 +48,6 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     constructor(
         private _notebook: NotebookDocument,
         private _selector: DocumentSelector,
-        private _input: TextDocument,
         notebookApi: IVSCodeNotebook,
     ) {
         this._concatTextDocument = notebookApi.createConcatTextDocument(_notebook, this._selector);
@@ -64,10 +63,25 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
                 this._updateInput();
                 this._onDidChange.fire();
             }
-        })
+        });
 
         this._updateConcat();
         this._updateInput();
+
+        const once = workspace.onDidOpenTextDocument(e => {
+            if (e.uri.scheme === 'vscode-interactive-input') {
+                const counter = /Interactive-(\d+)\.interactive/.exec(this._notebook.uri.path);
+                if (!counter || !counter[1]) {
+                    return;
+                }
+
+                if (e.uri.path.indexOf(`InteractiveInput-${counter[1]}`) >= 0) {
+                    this._input = e;
+                    this._updateInput();
+                    once.dispose();
+                }
+            }
+        });
     }
 
     private _updateConcat() {
@@ -95,7 +109,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     private _updateInput() {
         this._lineCounts = [
             this._lineCounts[0],
-            this._input.lineCount
+            this._input?.lineCount ?? 0
         ];
 
         this._textLen = [
@@ -104,7 +118,10 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         ];
     }
 
-    private _getDocumentTextLen(textDocument: TextDocument) {
+    private _getDocumentTextLen(textDocument?: TextDocument) {
+        if (!textDocument) {
+            return 0;
+        }
         return textDocument.offsetAt(textDocument.lineAt(textDocument.lineCount - 1).range.end) + 1;
 
     }
@@ -112,7 +129,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     getText(range?: Range) {
         if (!range) {
             let result = '';
-            result += this._concatTextDocument.getText() + '\n' + this._input.getText();
+            result += this._concatTextDocument.getText() + '\n' + (this._input?.getText() ?? '');
             return result;
         }
 
@@ -142,7 +159,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         if (line >= this._lineCounts[0]) {
             // input box
             const lineOffset = Math.max(0, line - this._lineCounts[0] - 1);
-            return this._input.offsetAt(new Position(lineOffset, position.character));
+            return this._input?.offsetAt(new Position(lineOffset, position.character)) ?? 0;
         } else {
             // concat
             return this._concatTextDocument.offsetAt(position);
@@ -157,14 +174,14 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
             if (locationOrOffset >= concatTextLen) {
                 // in the input box
                 const offset = Math.max(0, locationOrOffset - concatTextLen - 1);
-                return this._input.positionAt(offset);
+                return this._input?.positionAt(offset) ?? new Position(0, 0);
             } else {
                 const position = this._concatTextDocument.positionAt(locationOrOffset);
                 return new Position(this._lineCounts[0] + 1 + position.line, position.character);
             }
         }
 
-        if (locationOrOffset.uri.toString() === this._input.uri.toString()) {
+        if (locationOrOffset.uri.toString() === this._input?.uri.toString()) {
             // range in the input box
             return new Position(this._lineCounts[0] + 1 + locationOrOffset.range.start.line, locationOrOffset.range.start.character);
         } else {
@@ -185,7 +202,8 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
             const endOffset = Math.max(0, positionOrRange.end.line - this._lineCounts[0] - 1);
             const endPosition = new Position(endOffset, positionOrRange.end.character);
 
-            return new Location(this._input.uri, new Range(startPosition, endPosition));
+            // TODO@rebornix !
+            return new Location(this._input!.uri, new Range(startPosition, endPosition));
         } else {
             // this is the NotebookConcatTextDocument
             return this._concatTextDocument.locationAt(positionOrRange);
@@ -193,7 +211,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
     }
 
     contains(uri: Uri): boolean {
-        if (this._input.uri.toString() === uri.toString()) {
+        if (this._input?.uri.toString() === uri.toString()) {
             return true;
         }
 
@@ -216,7 +234,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         const location = this._concatTextDocument.locationAt(position);
 
         // Get the cell at this location
-        if (location.uri.toString() === this._input.uri.toString()) {
+        if (location.uri.toString() === this._input?.uri.toString()) {
             return this._input.lineAt(location.range.start);
         }
 
@@ -229,7 +247,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
         // (we need the translated location, that's why we can't use getCellAtPosition)
         const location = this._concatTextDocument.locationAt(position);
 
-        if (location.uri.toString() === this._input.uri.toString()) {
+        if (location.uri.toString() === this._input?.uri.toString()) {
             return this._input.getWordRangeAtPosition(location.range.start, regexp);
         }
 

@@ -32,6 +32,7 @@ import {
 } from 'vscode';
 import { NotebookCell, NotebookDocument } from 'vscode-proposed';
 import { IVSCodeNotebook } from '../../common/application/types';
+import { InteractiveInputScheme, InteractiveScheme } from '../../common/constants';
 import { IFileSystem } from '../../common/platform/types';
 import { IConcatTextDocument } from './concatTextDocument';
 import { NotebookConcatDocument } from './notebookConcatDocument';
@@ -76,6 +77,18 @@ export class NotebookConverter implements Disposable {
     }
 
     private static getDocumentKey(uri: Uri): string {
+        if (uri.scheme === InteractiveInputScheme) {
+            // input
+            const counter = /InteractiveInput-(\d+)/.exec(uri.path);
+            if (counter && counter[1]) {
+                return `Interactive-${counter[1]}.interactive`;
+            }
+        }
+
+        if (uri.scheme === InteractiveScheme) {
+            return uri.path;
+        }
+
         // Use the path of the doc uri. It should be the same for all cells
         if (os.platform() === 'win32') {
             return uri.fsPath.toLowerCase();
@@ -651,7 +664,7 @@ export class NotebookConverter implements Disposable {
 
     private onDidOpenNotebook(doc: NotebookDocument) {
         const safeDoc = new SafeNotebookDocument(doc);
-        if (this.notebookFilter.test(safeDoc.fileName)) {
+        if (this.notebookFilter.test(safeDoc.fileName) || doc.notebookType === 'interactive') {
             this.getTextDocumentWrapper(safeDoc.uri);
         }
     }

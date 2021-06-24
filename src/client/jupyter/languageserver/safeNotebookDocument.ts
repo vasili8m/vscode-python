@@ -81,8 +81,8 @@ export class SafeNotebookDocument implements ISafeNotebookDocument {
         return this.notebook.metadata;
     }
 
-    public get viewType(): string {
-        return this.notebook.viewType;
+    public get notebookType(): string {
+        return this.notebook.notebookType;
     }
 
     public save(): Thenable<boolean> {
