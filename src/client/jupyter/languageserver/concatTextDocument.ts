@@ -40,7 +40,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
 
 	private _concatTextDocument: NotebookConcatTextDocument;
 	private _lineCounts: [number, number] = [0, 0];
-	// private _textLen: [number, number] = [0, 0];
+	private _textLen: [number, number] = [0, 0];
 
     get isClosed(): boolean {
         return this._concatTextDocument.isClosed;
@@ -54,33 +54,58 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
 
 		this._concatTextDocument.onDidChange(() => {
 			// not performant, NotebookConcatTextDocument should provide lineCount
-			this._updateLineCount();
+			this._updateConcat();
             this._onDidChange.fire();
 		});
 
 		workspace.onDidChangeTextDocument(e => {
 			if (e.document === this._input) {
-				this._updateLineCount();
+				this._updateInput();
+				this._onDidChange.fire();
 			}
 		})
 
-		this._updateLineCount();
-
+		this._updateConcat();
+		this._updateInput();
 	}
 
-	private _updateLineCount() {
+	private _updateConcat() {
 		let concatLineCnt = 0;
+		let concatTextLen = 0;
 		for (let i = 0; i < this._notebook.cellCount; i++) {
 			const cell = this._notebook.cellAt(i);
 			if (cell.document.languageId === 'python') {
-				concatLineCnt += this._notebook.cellAt(i).document.lineCount + 1;
+				concatLineCnt += cell.document.lineCount + 1;
+				concatTextLen += this._getDocumentTextLen(cell.document) + 1;
 			}
 		}
 
 		this._lineCounts = [
 			concatLineCnt > 0 ? concatLineCnt - 1 : 0, // NotebookConcatTextDocument.lineCount
+			this._lineCounts[1]
+		];
+
+		this._textLen = [
+			concatTextLen > 0 ? concatTextLen - 1 : 0,
+			this._textLen[1]
+		];
+	}
+
+	private _updateInput() {
+		this._lineCounts = [
+			this._lineCounts[0],
 			this._input.lineCount
 		];
+
+		this._textLen = [
+			this._textLen[0],
+			this._getDocumentTextLen(this._input)
+		];
+	}
+
+	private _getDocumentTextLen(textDocument: TextDocument) {
+		return textDocument.offsetAt(textDocument.lineAt(textDocument.lineCount - 1).range.end) + 1;
+
 	}
 
 	getText(range?: Range) {
@@ -126,7 +151,7 @@ export class InteractiveConcatTextDocument implements IConcatTextDocument  {
 	// turning an offset on the final concatenatd document to position
 	positionAt(locationOrOffset: Location | number): Position {
 		if (typeof locationOrOffset === 'number') {
-			const concatTextLen = this._concatTextDocument.getText().length;
+			const concatTextLen = this._textLen[0];
 
 			if (locationOrOffset >= concatTextLen) {
 				// in the input box
