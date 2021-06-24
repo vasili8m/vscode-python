@@ -2,18 +2,18 @@
 // Licensed under the MIT License.
 
 import { inject, injectable, named } from 'inversify';
-import { WorkspaceFolder, CancellationToken, TestItem, TestRunRequest, Uri } from 'vscode';
+import { CancellationToken, TestItem, TestRunRequest, Uri, WorkspaceFolder } from 'vscode';
 import { IWorkspaceService } from '../../../common/application/types';
 import { IConfigurationService } from '../../../common/types';
-import { PYTEST_PROVIDER } from '../../common/constants';
+import { UNITTEST_PROVIDER } from '../../common/constants';
 import { getUri } from '../common/testItemUtilities';
 import { ITestController, ITestDiscovery, ITestsRunner, PythonTestData } from '../common/types';
 
 @injectable()
-export class PytestController implements ITestController {
+export class UnittestController implements ITestController {
     constructor(
-        @inject(ITestDiscovery) @named(PYTEST_PROVIDER) private readonly discovery: ITestDiscovery,
-        @inject(ITestsRunner) @named(PYTEST_PROVIDER) private readonly runner: ITestsRunner,
+        @inject(ITestDiscovery) @named(UNITTEST_PROVIDER) private readonly discovery: ITestDiscovery,
+        @inject(ITestsRunner) @named(UNITTEST_PROVIDER) private readonly runner: ITestsRunner,
         @inject(IConfigurationService) private readonly configService: IConfigurationService,
         @inject(IWorkspaceService) private readonly workspaceService: IWorkspaceService,
     ) {}
@@ -26,7 +26,7 @@ export class PytestController implements ITestController {
         const options = {
             workspaceFolder: workspace.uri,
             cwd: settings.testing.cwd ?? workspace.uri.fsPath,
-            args: settings.testing.pytestArgs,
+            args: settings.testing.unittestArgs,
             token,
             ignoreCache: true,
         };
@@ -41,7 +41,7 @@ export class PytestController implements ITestController {
             workspaceFolder: workspaceFolder?.uri ?? Uri.file(cwd),
             cwd: settings.testing.cwd ?? cwd,
             token,
-            args: settings.testing.pytestArgs,
+            args: settings.testing.unittestArgs,
         });
     }
 }
